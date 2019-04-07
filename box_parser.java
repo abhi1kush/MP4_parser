@@ -7,6 +7,31 @@ class BoxHeader {
 	int size;
 	String name;
 	int absPosition;
+	static int spaceCount = 0;
+	
+	static void addSpace()
+	{
+		spaceCount += 4;
+	}
+	
+	static void delSpace()
+	{
+		spaceCount -= 4;
+	}
+	
+	private void printSpaces(int count)
+	{
+		for (int i = 0; i < count; i++) {
+			System.out.printf(" ");
+		}
+	}
+	
+	void print()
+	{
+		printSpaces(spaceCount);
+		System.out.printf("%s\n", name);
+		//System.out.printf("%s %d AbsPos: %d\n", name, size, absPosition);
+	}
 }
 
 public class box_parser {
@@ -15,29 +40,40 @@ public class box_parser {
 	{
 		byteBuffer = byteBufferArg;
 	}
-	
-	private boolean isEqual(byte arr1[], byte arr2[]) {
-		return (arr1[0] == arr2[0]) 
-				&& (arr1[1] == arr2[2])
-				&& (arr1[2] == arr2[3])
-				&& (arr1[3] == arr2[3]);
-	}
-	
+		
 	/*Expects curr position at after box_type (name)*/
 	private int extractBoxSize()
 	{
 		return byteBuffer.getInt((byteBuffer.position()-8));
 	}
 	
+	/*Expects curr position at starting of box*/
+	private int extractBoxSizeAbs()
+	{
+		return byteBuffer.getInt();
+	}
+	
 	/*Expects curr position at starting of Box */
-	private void extractBoxHeader(BoxHeader obj) 
+	private void extractBoxHeaderMdf(BoxHeader obj) 
 	{
 		byte[] readName = new byte[4];
-		obj.absPosition = 
+		obj.absPosition = byteBuffer.position();
 		obj.size = byteBuffer.getInt();
 		byteBuffer.get(readName, 0, 4);
 		String boxName = new String(readName);
 		obj.name = boxName;
+	}
+	
+	private void extractBoxHeader(BoxHeader obj) 
+	{
+		byte[] readName = new byte[4];
+		int positionBackUp = byteBuffer.position();
+		obj.absPosition = positionBackUp;
+		obj.size = byteBuffer.getInt();
+		byteBuffer.get(readName, 0, 4);
+		String boxName = new String(readName);
+		obj.name = boxName;
+		byteBuffer.position(positionBackUp);
 	}
 	
 	/*pointer is not at the starting of box, it is after type*/
@@ -48,6 +84,14 @@ public class box_parser {
 		byteBuffer.position(currPosition + size - 8);
 	}
 	
+	/*pointer is at the starting of box*/
+	private void skipBoxAbs()
+	{
+		int size = extractBoxSizeAbs();
+		int currPosition = byteBuffer.position();
+		byteBuffer.position(currPosition + size);
+	}
+	
 	public void setPositionAtftypBox()
 	{
 		Box boxObj = new Box();
@@ -55,49 +99,50 @@ public class box_parser {
 		int skipLen;
 		byte readBytes[] = new byte[4];
 		
-		for (int i = 0; i < 500 /*byteBuffer.limit()*/; i++)
+		for (int i = 0; i < 50; i++)
         {
         	byteBuffer.get(readBytes, 0, 4);
         	String boxName = new String(readBytes);
         	if (-1 != boxObj.isBoxName(boxName)) {
         		String boxType = new String(readBytes);
         		if (boxType.equals("ftyp")) {
-              		System.out.printf("%c%c%c%c: size %d\n",(char)readBytes[0], 
-            				(char)readBytes[1], (char)readBytes[2], 
-            				(char)readBytes[3], extractBoxSize());
               		//set pointer at starting of box.
               		byteBuffer.position(byteBuffer.position() - 8);
               		break;
         		}
           	}
         }
-        System.out.printf("\n--- END ---");
 	}
-	
-	private void printSpaces(int count)
-	{
-		for (int i = 0; i < count; i++) {
-			System.out.printf(" ");
-		}
-	}
-	
-	public void parseContainerBox(int boxPosition, int boxSize)
-	{
-		int spaceCount = 0;
-		BoxHeader headerObj = new BoxHeader();
-		int currPositionBackup = byteBuffer.position();
-		byteBuffer.position(boxPosition);
-		extractBoxHeader(headerObj);
-		System.out.printf("%s\n", headerObj.name);
-		spaceCount += 8;
-		for (int i = 8; i < boxSize;) {
-			extractBoxHeader(headerObj);
-			if (0 == Box.isContainer(headerObj.name))
-			skipBox();
-		}
 		
+	private void seekRel(int pos)
+	{
+		byteBuffer.position(byteBuffer.position() + pos);
+	}
+	
+	public void parseContainerBoxAbs(int boxPosition, int boxSize)
+	{
+		int currPositionBackup = byteBuffer.position();
+		BoxHeader headerObj = new BoxHeader();
+		
+		byteBuffer.position(boxPosition);
+		extractBoxHeaderMdf(headerObj);
+		BoxHeader.addSpace();
+		while (byteBuffer.position() < currPositionBackup + boxSize) {
+			extractBoxHeader(headerObj);
+			headerObj.print();
+			int ret = Box.isContainer(headerObj.name);
+			if (1 == ret) {
+				parseContainerBoxAbs(headerObj.absPosition, headerObj.size);
+			}else if (0 == ret){
+				seekRel(headerObj.size);
+			} else {
+				System.out.println("Not a box: Parsing Error\n");
+				break;
+			}
+		}
+		BoxHeader.delSpace();
 		//Reset back to old position.
-		byteBuffer.position(currPositionBackup);
+		//byteBuffer.position(currPositionBackup);
 	}
 	
 	public void BoxParser()
@@ -107,13 +152,29 @@ public class box_parser {
 		BoxHeader currBoxHeader = new BoxHeader();
 		int skipLen;
 		byte readBytes[] = new byte[4];
-		Deque<BoxHeader> dfsStack = new ArrayDeque<BoxHeader>();
 		
-		setPositionAtftypBox();
-		extractBoxHeader(currBoxHeader);
-		System.out.printf("\nBoxParser: size %d type %s\n", currBoxHeader.size, currBoxHeader.name);
-		if (1 == Box.isContainer(currBoxHeader.name)) {
-			//dfsStack.addLast();
+		//setPositionAtftypBox();
+		
+		while (byteBuffer.position() < byteBuffer.capacity()) {
+			int startPos = byteBuffer.position();
+			int ret;
+			extractBoxHeader(currBoxHeader);
+			ret = Box.isContainer(currBoxHeader.name); 
+			if (-1 != ret) {
+				currBoxHeader.print();
+			}
+			
+			if (1 == ret) {
+				parseContainerBoxAbs(currBoxHeader.absPosition, currBoxHeader.size);
+			} else if (0 == ret) {
+				seekRel(currBoxHeader.size);
+			} else {
+				System.out.println("Not a box");
+			}
+			if (startPos == byteBuffer.position()) {
+				//break infinite loop.
+				break;
+			}
 		}
 	}
 }
