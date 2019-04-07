@@ -14,7 +14,7 @@ class BoxInfo
 }
 
 public class Box {
-	private BoxInfo[] boxList = {
+	private static BoxInfo[] boxList = {
 		new BoxInfo("ftyp", false),
 		new BoxInfo("pdin", false), 
 		new BoxInfo("moov", true), //container
@@ -85,7 +85,7 @@ public class Box {
 		new BoxInfo("pitm", false)	
 	};
 	
-	private HashMap<String, BoxInfo> boxMap = new HashMap<>();
+	private static HashMap<String, BoxInfo> boxMap = new HashMap<>();
 	
 	Box()
 	{
@@ -94,7 +94,7 @@ public class Box {
 		}
 	}
 	
-	int isContainer(String str)
+	static int isContainer(String str)
 	{
 		if(boxMap.containsKey(str)) {
 			return boxMap.get(str).isContainer ? 1 : 0;
@@ -102,7 +102,7 @@ public class Box {
 		return -1;
 	}
 	
-	int isBoxName(String str)
+	static int isBoxName(String str)
 	{
 		if(boxMap.containsKey(str)) {
 			return boxMap.get(str).isContainer ? 1 : 0;
