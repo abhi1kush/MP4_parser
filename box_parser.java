@@ -29,8 +29,8 @@ class BoxHeader {
 	void print()
 	{
 		printSpaces(spaceCount);
-		System.out.printf("%s\n", name);
-		//System.out.printf("%s %d AbsPos: %d\n", name, size, absPosition);
+		//System.out.printf("%s\n", name);
+		System.out.printf("%s %d AbsPos: %d\n", name, size, absPosition);
 	}
 }
 
@@ -128,6 +128,7 @@ public class box_parser {
 		extractBoxHeaderMdf(headerObj);
 		BoxHeader.addSpace();
 		while (byteBuffer.position() < currPositionBackup + boxSize) {
+			int startPos = byteBuffer.position();
 			extractBoxHeader(headerObj);
 			headerObj.print();
 			int ret = Box.isContainer(headerObj.name);
@@ -136,7 +137,15 @@ public class box_parser {
 			}else if (0 == ret){
 				seekRel(headerObj.size);
 			} else {
-				System.out.println("Not a box: Parsing Error\n");
+				System.out.println("Not a box: Parsing Error{");
+				headerObj.print();
+				System.out.println("}");
+				seekRel(headerObj.size);
+				//break;
+			}
+			if (startPos == byteBuffer.position()) {
+				//break infinite loop.
+				System.out.println("Breaking Infinite loop.");
 				break;
 			}
 		}
@@ -173,6 +182,7 @@ public class box_parser {
 			}
 			if (startPos == byteBuffer.position()) {
 				//break infinite loop.
+				System.out.println("Breaking Infinite loop.");
 				break;
 			}
 		}

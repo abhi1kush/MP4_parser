@@ -37,6 +37,7 @@ public class Box {
 		new BoxInfo("stbl", true), //container
 		new BoxInfo("stsd", false),
 		new BoxInfo("stts", false),
+		new BoxInfo("stsc", false),
 		new BoxInfo("ctts", false),
 		new BoxInfo("stsz", false),
 		new BoxInfo("stz2", false),
@@ -69,7 +70,7 @@ public class Box {
 		new BoxInfo("skip", true), //container
 		new BoxInfo("udta", true), //container
 		new BoxInfo("cprt", false),
-		new BoxInfo("meta", true), //container
+		new BoxInfo("meta", false), //container //causing parsing error.
 		new BoxInfo("hdlr", false),
 		new BoxInfo("ipmc", false),
 		new BoxInfo("iloc", false),
