@@ -1,4 +1,5 @@
 import java.util.HashMap;
+import java.util.Map;
 
 import javax.swing.text.html.HTMLDocument.Iterator;
 
@@ -14,6 +15,7 @@ class BoxInfo
 }
 
 public class Box {
+	private static boolean isIntialised = false;
 	private static BoxInfo[] boxList = {
 		new BoxInfo("ftyp", false),
 		new BoxInfo("pdin", false), 
@@ -72,6 +74,9 @@ public class Box {
 		new BoxInfo("cprt", false),
 		new BoxInfo("meta", false), //container //causing parsing error.
 		new BoxInfo("hdlr", false),
+		new BoxInfo("ilst", true), //container
+		new BoxInfo("gsst", false),
+		new BoxInfo("gstd", false),
 		new BoxInfo("ipmc", false),
 		new BoxInfo("iloc", false),
 		new BoxInfo("ipro", true), //container
@@ -88,16 +93,20 @@ public class Box {
 	
 	private static HashMap<String, BoxInfo> boxMap = new HashMap<>();
 	
-	Box()
+	public static void initMap()
 	{
 		for (int i = 0; i < boxList.length; i++) {
 			boxMap.put(boxList[i].name, boxList[i]);
 		}
+		isIntialised = true;
 	}
 	
 	static int isContainer(String str)
-	{
-		if(boxMap.containsKey(str)) {
+	{   
+		if (false == isIntialised) {
+			initMap();
+		}
+		if (boxMap.containsKey(str)) {
 			return boxMap.get(str).isContainer ? 1 : 0;
 		}
 		return -1;
@@ -105,9 +114,22 @@ public class Box {
 	
 	static int isBoxName(String str)
 	{
+		if (false == isIntialised) {
+			initMap();
+		}
 		if(boxMap.containsKey(str)) {
-			return boxMap.get(str).isContainer ? 1 : 0;
+			return 1;
 		}
 		return -1;
+	}
+	
+	public static void printMap()
+	{
+		if (false == isIntialised) {
+			initMap();
+		}
+		for (HashMap.Entry<String, BoxInfo> entry : boxMap.entrySet()) {
+		    System.out.println(entry.getKey()+" : "+entry.getValue());
+		}
 	}
 }
