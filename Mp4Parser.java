@@ -31,6 +31,9 @@ public class Mp4Parser {
 		byteBuffer.get(readName, 0, 4);
 		String boxName = new String(readName);
 		obj.name = boxName;
+		if (1 == Box.isFullBox(boxName)) {
+			seekRel(4);
+		}
 	}
 	
 	/*
@@ -199,4 +202,8 @@ class BoxHeader {
 		//System.out.printf("%s\n", name);
 		System.out.printf("%s %d AbsPos: %d\n", name, size, absPosition);
 	}
+}
+
+class FullBoxHeader extends BoxHeader {
+	byte versionAndFlag[] = new byte[4];
 }
